@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Boat Fuel Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --navy: #1a2b4a;
+      --ocean: #2563eb;
+      --teal: #0891b2;
+      --foam: #e0f2fe;
+      --coral: #ef4444;
+      --green: #10b981;
+      --orange: #f59e0b;
+      --gray: #64748b;
+      --light: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --radius: 10px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--light);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--navy);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+
+    header h1 { font-size: 1.15rem; font-weight: 700; }
+
+    .unit-btn {
+      margin-left: auto;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 7px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      transition: background 0.15s;
+    }
+    .unit-btn:hover { background: rgba(255,255,255,0.28); }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .card {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    /* ---- Profiles ---- */
+    .profiles-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      min-height: 36px;
+    }
+
+    .profile-chip {
+      padding: 8px 18px;
+      border-radius: 22px;
+      border: 2px solid var(--border);
+      background: white;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.15s;
+      color: var(--text);
+    }
+    .profile-chip.active {
+      background: var(--navy);
+      color: white;
+      border-color: var(--navy);
+    }
+    .profile-chip:hover:not(.active) { border-color: var(--ocean); color: var(--ocean); }
+
+    .profile-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ---- Buttons ---- */
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+    .btn-primary { background: var(--ocean); color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: var(--light); color: var(--text); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-danger { background: #fee2e2; color: var(--coral); }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-sm { padding: 7px 13px; font-size: 0.8rem; }
+    .btn-icon { padding: 6px 10px; font-size: 0.85rem; }
+
+    /* ---- Form ---- */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input, select {
+      padding: 12px 14px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      color: var(--text);
+      background: white;
+      transition: border-color 0.15s;
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--ocean);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    /* ---- GPS row ---- */
+    .gps-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--foam);
+      border-radius: 8px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .gps-label { font-size: 0.85rem; font-weight: 700; color: var(--teal); }
+    .gps-status { font-size: 0.82rem; color: var(--gray); }
+
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 24px;
+      transition: 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--teal); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    /* ---- Efficiency callout ---- */
+    .efficient-callout {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 16px;
+      background: #ecfdf5;
+      border-left: 4px solid var(--green);
+      border-radius: 0 8px 8px 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #065f46;
+    }
+
+    /* ---- Chart ---- */
+    .chart-legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      user-select: none;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .legend-item:hover { background: var(--light); }
+    .legend-item.hidden { opacity: 0.38; }
+
+    .legend-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 320px;
+    }
+
+    /* ---- Table ---- */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      background: var(--light);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    th:first-child { border-radius: 6px 0 0 6px; }
+    th:last-child { border-radius: 0 6px 6px 0; }
+
+    td {
+      padding: 11px 12px;
+      border-top: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr.efficient-row td { background: #f0fdf4; }
+    tr:hover td { background: #f8fafc; }
+    tr.efficient-row:hover td { background: #dcfce7; }
+
+    .badge {
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+    .badge-green { background: #d1fae5; color: #065f46; }
+
+    .td-actions { display: flex; gap: 4px; justify-content: flex-end; }
+
+    /* ---- Empty state ---- */
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state svg { opacity: 0.3; margin-bottom: 10px; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ---- Modal ---- */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.55);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(2px);
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: white;
+      border-radius: 14px;
+      padding: 26px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+      animation: modalIn 0.18s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal h2 { font-size: 1.1rem; margin-bottom: 18px; color: var(--navy); }
+    .modal p  { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .modal .form-grid { grid-template-columns: 1fr; }
+
+    /* ---- No profiles notice ---- */
+    .no-profiles-hint {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 600px) {
+      main { padding: 14px 12px; gap: 14px; }
+      .form-grid { grid-template-columns: 1fr 1fr; }
+      .chart-container { height: 260px; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-7.08A2 2 0 0 0 21.72 11l-1.74-3.27A2 2 0 0 0 18.24 7H5.76a2 2 0 0 0-1.74 1.01L2.28 11A2 2 0 0 0 2 12.92Z"/>
+    <path d="M12 7v3"/>
+  </svg>
+  <h1>Boat Fuel Tracker</h1>
+  <button class="unit-btn" id="unitToggle" onclick="toggleUnit()">L/h</button>
+</header>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <h2 id="profileModalTitle">New Boat Profile</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="profileName">Boat Name</label>
+        <input type="text" id="profileName" placeholder="e.g. Sea Ray 250" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="profileMinRpm">Min RPM (idle)</label>
+        <input type="number" id="profileMinRpm" placeholder="e.g. 700" step="100" min="100" />
+      </div>
+      <div class="form-group">
+        <label for="profileMaxRpm">Max RPM</label>
+        <input type="number" id="profileMaxRpm" placeholder="e.g. 4500" step="100" min="200" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeProfileModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfile()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h2>Delete Boat Profile?</h2>
+    <p>This will permanently delete this boat profile and all its logged data. This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDeleteProfile()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <!-- Profiles card -->
+  <div class="card">
+    <div class="card-title">Boat Profiles</div>
+    <div class="profiles-row" id="profilesRow"></div>
+    <div class="profile-actions" id="profileActions">
+      <button class="btn btn-primary btn-sm" onclick="openProfileModal()">+ New Boat</button>
+      <button class="btn btn-secondary btn-sm" id="editProfileBtn" onclick="openEditProfileModal()" style="display:none">Edit</button>
+      <button class="btn btn-danger btn-sm" id="deleteProfileBtn" onclick="openDeleteModal()" style="display:none">Delete</button>
+    </div>
+  </div>
+
+  <!-- Active boat section -->
+  <div id="activeBoatSection" style="display:none;flex-direction:column;gap:18px;">
+
+    <!-- Data entry -->
+    <div class="card">
+      <div class="card-title" id="entryCardTitle">Log Data Point</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="inputRpm">RPM</label>
+          <select id="inputRpm">
+            <option value="">-- Select RPM --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="inputSpeed">Speed (knots)</label>
+          <input type="number" id="inputSpeed" placeholder="0.0" step="0.1" min="0" inputmode="decimal" />
+        </div>
+        <div class="form-group">
+          <label id="fuelInputLabel" for="inputFuel">Fuel (L/h)</label>
+          <input type="number" id="inputFuel" placeholder="0.0" step="0.1" min="0" inputmode="decimal" />
+        </div>
+      </div>
+
+      <!-- GPS row -->
+      <div class="gps-row">
+        <label class="toggle-switch" title="Auto-fill speed from GPS">
+          <input type="checkbox" id="gpsToggle" onchange="toggleGPS()" />
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="gps-label">Use GPS Speed</span>
+        <span class="gps-status" id="gpsStatus"></span>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" id="addPointBtn" onclick="addDataPoint()">Add Point</button>
+        <button class="btn btn-secondary" id="cancelEditBtn" onclick="cancelEdit()" style="display:none">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Efficiency callout -->
+    <div id="efficientCallout" class="efficient-callout" style="display:none">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+      <span id="efficientText"></span>
+    </div>
+
+    <!-- Chart -->
+    <div class="card">
+      <div class="card-title">Fuel Efficiency Chart</div>
+      <div class="chart-legend">
+        <div class="legend-item" id="legend-0" onclick="toggleSeries(0)">
+          <div class="legend-dot" style="background:#2563eb"></div>
+          <span id="legend-label-0">Fuel (L/h)</span>
+        </div>
+        <div class="legend-item" id="legend-1" onclick="toggleSeries(1)">
+          <div class="legend-dot" style="background:#10b981"></div>
+          <span id="legend-label-1">Fuel (L/nm)</span>
+        </div>
+        <div class="legend-item" id="legend-2" onclick="toggleSeries(2)">
+          <div class="legend-dot" style="background:#f59e0b"></div>
+          <span>Speed (kn)</span>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="fuelChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Data table -->
+    <div class="card">
+      <div class="card-title">Data Points</div>
+      <div class="empty-state" id="emptyState">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+        <p>No data points yet — start logging above.</p>
+      </div>
+      <div class="table-wrap" id="tableContainer" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>RPM</th>
+              <th>Speed (kn)</th>
+              <th id="thFuelRate">Fuel (L/h)</th>
+              <th id="thFuelNm">Fuel (L/nm)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="dataTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /activeBoatSection -->
+</main>
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const L_TO_GAL = 0.264172;
+const STORAGE_KEY = 'boatFuelTracker_v2';
+
+// ============================================================
+// STATE
+// ============================================================
+let state = {
+  profiles: [],        // [{id, name, minRpm, maxRpm}]
+  activeProfileId: null,
+  data: {},            // {profileId: [{id, rpm, speed, fuelLh}]}
+  unit: 'L',          // 'L' or 'gal'
+  hiddenSeries: [],   // array of indices (serialisable)
+};
+
+let chart = null;
+let gpsWatchId = null;
+let editingPointId = null;
+let deletingProfileId = null;
+let editingProfileId = null;
+
+// ============================================================
+// STORAGE
+// ============================================================
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const p = JSON.parse(saved);
+      state.profiles = p.profiles || [];
+      state.activeProfileId = p.activeProfileId || null;
+      state.data = p.data || {};
+      state.unit = p.unit || 'L';
+      state.hiddenSeries = p.hiddenSeries || [];
+    }
+  } catch(e) { console.warn('Failed to load state', e); }
+}
+
+function persistState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(e) { console.warn('Failed to save state', e); }
+}
+
+// ============================================================
+// UNIT HELPERS
+// ============================================================
+function toggleUnit() {
+  state.unit = state.unit === 'L' ? 'gal' : 'L';
+  persistState();
+  render();
+}
+
+function fuelUnit()      { return state.unit === 'L' ? 'L'    : 'gal'; }
+function fuelRateLabel() { return `${fuelUnit()}/h`; }
+function fuelNmLabel()   { return `${fuelUnit()}/nm`; }
+
+function convertFuel(litersPerHour) {
+  return state.unit === 'L' ? litersPerHour : litersPerHour * L_TO_GAL;
+}
+
+function displayFuel(litersPerHour, decimals = 1) {
+  return convertFuel(litersPerHour).toFixed(decimals);
+}
+
+// ============================================================
+// PROFILE MODAL
+// ============================================================
+function openProfileModal() {
+  editingProfileId = null;
+  document.getElementById('profileModalTitle').textContent = 'New Boat Profile';
+  document.getElementById('profileName').value = '';
+  document.getElementById('profileMinRpm').value = '';
+  document.getElementById('profileMaxRpm').value = '';
+  document.getElementById('profileModal').classList.add('open');
+  setTimeout(() => document.getElementById('profileName').focus(), 50);
+}
+
+function openEditProfileModal() {
+  const profile = state.profiles.find(p => p.id === state.activeProfileId);
+  if (!profile) return;
+  editingProfileId = profile.id;
+  document.getElementById('profileModalTitle').textContent = 'Edit Boat Profile';
+  document.getElementById('profileName').value = profile.name;
+  document.getElementById('profileMinRpm').value = profile.minRpm;
+  document.getElementById('profileMaxRpm').value = profile.maxRpm;
+  document.getElementById('profileModal').classList.add('open');
+  setTimeout(() => document.getElementById('profileName').focus(), 50);
+}
+
+function closeProfileModal() {
+  document.getElementById('profileModal').classList.remove('open');
+}
+
+function saveProfile() {
+  const name   = document.getElementById('profileName').value.trim();
+  const minRpm = parseInt(document.getElementById('profileMinRpm').value, 10);
+  const maxRpm = parseInt(document.getElementById('profileMaxRpm').value, 10);
+
+  if (!name) { alert('Please enter a boat name.'); return; }
+  if (isNaN(minRpm) || isNaN(maxRpm)) { alert('Please enter valid RPM values.'); return; }
+  if (minRpm >= maxRpm) { alert('Min RPM must be less than Max RPM.'); return; }
+
+  if (editingProfileId) {
+    const idx = state.profiles.findIndex(p => p.id === editingProfileId);
+    if (idx !== -1) state.profiles[idx] = { ...state.profiles[idx], name, minRpm, maxRpm };
+  } else {
+    const id = Date.now().toString();
+    state.profiles.push({ id, name, minRpm, maxRpm });
+    state.activeProfileId = id;
+    state.data[id] = [];
+  }
+
+  persistState();
+  closeProfileModal();
+  render();
+}
+
+// ============================================================
+// DELETE MODAL
+// ============================================================
+function openDeleteModal() {
+  deletingProfileId = state.activeProfileId;
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('open');
+}
+
+function confirmDeleteProfile() {
+  if (!deletingProfileId) return;
+  state.profiles = state.profiles.filter(p => p.id !== deletingProfileId);
+  delete state.data[deletingProfileId];
+  if (state.activeProfileId === deletingProfileId) {
+    state.activeProfileId = state.profiles.length > 0 ? state.profiles[0].id : null;
+  }
+  persistState();
+  closeDeleteModal();
+  cancelEdit();
+  render();
+}
+
+function selectProfile(id) {
+  state.activeProfileId = id;
+  persistState();
+  cancelEdit();
+  render();
+}
+
+// ============================================================
+// DATA POINTS
+// ============================================================
+function getActiveData() {
+  if (!state.activeProfileId) return [];
+  return state.data[state.activeProfileId] || [];
+}
+
+function populateRpmSelect() {
+  const profile = state.profiles.find(p => p.id === state.activeProfileId);
+  if (!profile) return;
+  const select = document.getElementById('inputRpm');
+  const current = select.value;
+  select.innerHTML = '<option value="">-- Select RPM --</option>';
+  for (let rpm = profile.minRpm; rpm <= profile.maxRpm; rpm += 100) {
+    const opt = document.createElement('option');
+    opt.value = rpm;
+    opt.textContent = rpm.toLocaleString() + ' RPM';
+    if (rpm.toString() === current) opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
+function addDataPoint() {
+  const rpmVal  = document.getElementById('inputRpm').value;
+  const speedVal = document.getElementById('inputSpeed').value;
+  const fuelVal  = document.getElementById('inputFuel').value;
+
+  const rpm   = parseInt(rpmVal, 10);
+  const speed = parseFloat(speedVal);
+  const fuelDisplay = parseFloat(fuelVal);
+
+  if (!rpmVal || isNaN(speed) || isNaN(fuelDisplay)) {
+    alert('Please fill in all three fields (RPM, speed, fuel).');
+    return;
+  }
+  if (speed <= 0) { alert('Speed must be greater than 0.'); return; }
+  if (fuelDisplay <= 0) { alert('Fuel consumption must be greater than 0.'); return; }
+
+  // Convert displayed fuel back to L/h for storage
+  const fuelLh = state.unit === 'L' ? fuelDisplay : fuelDisplay / L_TO_GAL;
+
+  const points = getActiveData();
+
+  if (editingPointId) {
+    const idx = points.findIndex(p => p.id === editingPointId);
+    if (idx !== -1) points[idx] = { ...points[idx], rpm, speed, fuelLh };
+    editingPointId = null;
+    document.getElementById('addPointBtn').textContent = 'Add Point';
+    document.getElementById('cancelEditBtn').style.display = 'none';
+  } else {
+    const existing = points.find(p => p.rpm === rpm);
+    if (existing) {
+      if (!confirm(`RPM ${rpm.toLocaleString()} already has a data point. Overwrite it?`)) return;
+      existing.speed = speed;
+      existing.fuelLh = fuelLh;
+    } else {
+      points.push({ id: Date.now().toString(), rpm, speed, fuelLh });
+    }
+  }
+
+  points.sort((a, b) => a.rpm - b.rpm);
+  state.data[state.activeProfileId] = points;
+  persistState();
+
+  document.getElementById('inputSpeed').value = '';
+  document.getElementById('inputFuel').value = '';
+  document.getElementById('inputRpm').value = '';
+  render();
+}
+
+function editDataPoint(id) {
+  const point = getActiveData().find(p => p.id === id);
+  if (!point) return;
+
+  editingPointId = id;
+  document.getElementById('inputRpm').value = point.rpm;
+  document.getElementById('inputSpeed').value = point.speed;
+  document.getElementById('inputFuel').value = parseFloat(displayFuel(point.fuelLh, 2));
+  document.getElementById('addPointBtn').textContent = 'Update Point';
+  document.getElementById('cancelEditBtn').style.display = '';
+  document.getElementById('entryCardTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function deleteDataPoint(id) {
+  if (!confirm('Delete this data point?')) return;
+  state.data[state.activeProfileId] = getActiveData().filter(p => p.id !== id);
+  persistState();
+  if (editingPointId === id) cancelEdit();
+  render();
+}
+
+function cancelEdit() {
+  editingPointId = null;
+  document.getElementById('addPointBtn').textContent = 'Add Point';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+  document.getElementById('inputRpm').value = '';
+  document.getElementById('inputSpeed').value = '';
+  document.getElementById('inputFuel').value = '';
+}
+
+// ============================================================
+// CALCULATIONS
+// ============================================================
+function calcFuelPerNm(fuelLh, speedKn) {
+  if (!speedKn || speedKn <= 0) return null;
+  return fuelLh / speedKn;
+}
+
+function findBestPoint(points) {
+  let best = null;
+  for (const p of points) {
+    const fnm = calcFuelPerNm(p.fuelLh, p.speed);
+    if (fnm === null) continue;
+    if (best === null || fnm < best.fnm) best = { ...p, fnm };
+  }
+  return best;
+}
+
+// ============================================================
+// GPS
+// ============================================================
+function toggleGPS() {
+  document.getElementById('gpsToggle').checked ? startGPS() : stopGPS();
+}
+
+function startGPS() {
+  if (!('geolocation' in navigator)) {
+    document.getElementById('gpsStatus').textContent = 'Geolocation not supported by this browser.';
+    document.getElementById('gpsToggle').checked = false;
+    return;
+  }
+  document.getElementById('gpsStatus').textContent = 'Acquiring GPS signal...';
+  gpsWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      const mps = pos.coords.speed;
+      if (mps !== null && mps >= 0) {
+        const knots = (mps * 1.94384).toFixed(1);
+        document.getElementById('inputSpeed').value = knots;
+        document.getElementById('gpsStatus').textContent = `GPS: ${knots} kn`;
+      } else {
+        document.getElementById('gpsStatus').textContent = 'GPS connected — speed unavailable';
+      }
+    },
+    err => {
+      const msgs = {
+        1: 'Location permission denied.',
+        2: 'Position unavailable.',
+        3: 'GPS request timed out.',
+      };
+      document.getElementById('gpsStatus').textContent = msgs[err.code] || err.message;
+      document.getElementById('gpsToggle').checked = false;
+      gpsWatchId = null;
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+}
+
+function stopGPS() {
+  if (gpsWatchId !== null) {
+    navigator.geolocation.clearWatch(gpsWatchId);
+    gpsWatchId = null;
+  }
+  document.getElementById('gpsStatus').textContent = '';
+}
+
+// ============================================================
+// CHART
+// ============================================================
+function hiddenSet() { return new Set(state.hiddenSeries); }
+
+function toggleSeries(idx) {
+  const s = hiddenSet();
+  s.has(idx) ? s.delete(idx) : s.add(idx);
+  state.hiddenSeries = [...s];
+  persistState();
+
+  document.getElementById(`legend-${idx}`).classList.toggle('hidden', s.has(idx));
+  if (chart) {
+    chart.data.datasets[idx].hidden = s.has(idx);
+    chart.update();
+  }
+}
+
+function buildChartData(points) {
+  const labels = points.map(p => p.rpm);
+  return {
+    labels,
+    datasets: [
+      {
+        label: fuelRateLabel(),
+        data: points.map(p => +displayFuel(p.fuelLh, 3)),
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37,99,235,0.08)',
+        tension: 0.35,
+        yAxisID: 'yFuel',
+        hidden: hiddenSet().has(0),
+        fill: false,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+      },
+      {
+        label: fuelNmLabel(),
+        data: points.map(p => {
+          const fnm = calcFuelPerNm(p.fuelLh, p.speed);
+          return fnm !== null ? +convertFuel(fnm).toFixed(3) : null;
+        }),
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16,185,129,0.08)',
+        tension: 0.35,
+        yAxisID: 'yFuel',
+        hidden: hiddenSet().has(1),
+        fill: false,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        spanGaps: false,
+      },
+      {
+        label: 'Speed (kn)',
+        data: points.map(p => p.speed),
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245,158,11,0.08)',
+        tension: 0.35,
+        yAxisID: 'ySpeed',
+        hidden: hiddenSet().has(2),
+        fill: false,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+      },
+    ],
+  };
+}
+
+function updateChart(points) {
+  const data = buildChartData(points);
+
+  if (chart) {
+    chart.data = data;
+    chart.options.scales.yFuel.title.text = fuelUnit();
+    chart.update();
+    return;
+  }
+
+  const ctx = document.getElementById('fuelChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => `${parseInt(items[0].label).toLocaleString()} RPM`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'RPM', font: { weight: '700', size: 12 } },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          ticks: {
+            callback: v => Number(v).toLocaleString(),
+          },
+        },
+        yFuel: {
+          type: 'linear',
+          position: 'left',
+          title: { display: true, text: fuelUnit(), font: { weight: '700', size: 12 } },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          beginAtZero: true,
+        },
+        ySpeed: {
+          type: 'linear',
+          position: 'right',
+          title: { display: true, text: 'knots', font: { weight: '700', size: 12 } },
+          grid: { display: false },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  renderProfiles();
+  renderUnitLabels();
+
+  const profile = state.profiles.find(p => p.id === state.activeProfileId);
+  const section = document.getElementById('activeBoatSection');
+
+  if (profile) {
+    section.style.display = 'flex';
+    populateRpmSelect();
+    const points = getActiveData();
+    renderEfficiencyCallout(points);
+    updateChart(points);
+    renderTable(points);
+    // Apply hidden series to legend chips
+    for (let i = 0; i < 3; i++) {
+      document.getElementById(`legend-${i}`).classList.toggle('hidden', hiddenSet().has(i));
+    }
+  } else {
+    section.style.display = 'none';
+    if (chart) { chart.destroy(); chart = null; }
+  }
+}
+
+function renderProfiles() {
+  const row = document.getElementById('profilesRow');
+  row.innerHTML = '';
+
+  if (state.profiles.length === 0) {
+    row.innerHTML = '<span class="no-profiles-hint">No boats yet — create one to get started.</span>';
+  } else {
+    state.profiles.forEach(p => {
+      const chip = document.createElement('button');
+      chip.className = 'profile-chip' + (p.id === state.activeProfileId ? ' active' : '');
+      chip.textContent = p.name;
+      chip.onclick = () => selectProfile(p.id);
+      row.appendChild(chip);
+    });
+  }
+
+  const hasActive = !!state.activeProfileId;
+  document.getElementById('editProfileBtn').style.display = hasActive ? '' : 'none';
+  document.getElementById('deleteProfileBtn').style.display = hasActive ? '' : 'none';
+}
+
+function renderUnitLabels() {
+  document.getElementById('unitToggle').textContent = fuelRateLabel();
+  document.getElementById('fuelInputLabel').textContent = `Fuel (${fuelRateLabel()})`;
+  document.getElementById('thFuelRate').textContent = `Fuel (${fuelRateLabel()})`;
+  document.getElementById('thFuelNm').textContent = `Fuel (${fuelNmLabel()})`;
+  document.getElementById('legend-label-0').textContent = `Fuel (${fuelRateLabel()})`;
+  document.getElementById('legend-label-1').textContent = `Fuel (${fuelNmLabel()})`;
+}
+
+function renderEfficiencyCallout(points) {
+  const el = document.getElementById('efficientCallout');
+  const best = findBestPoint(points);
+  if (!best) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  document.getElementById('efficientText').textContent =
+    `Most fuel-efficient: ${best.rpm.toLocaleString()} RPM — ` +
+    `${convertFuel(best.fnm).toFixed(2)} ${fuelNmLabel()} at ${best.speed} kn`;
+}
+
+function renderTable(points) {
+  const emptyEl    = document.getElementById('emptyState');
+  const containerEl = document.getElementById('tableContainer');
+  const tbody      = document.getElementById('dataTableBody');
+
+  if (points.length === 0) {
+    emptyEl.style.display = 'block';
+    containerEl.style.display = 'none';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  containerEl.style.display = 'block';
+
+  const best = findBestPoint(points);
+  tbody.innerHTML = '';
+
+  points.forEach(p => {
+    const fnm   = calcFuelPerNm(p.fuelLh, p.speed);
+    const isBest = best && p.id === best.id;
+    const tr = document.createElement('tr');
+    if (isBest) tr.className = 'efficient-row';
+
+    const fnmText = fnm !== null ? convertFuel(fnm).toFixed(2) : '—';
+
+    tr.innerHTML = `
+      <td>
+        <strong>${p.rpm.toLocaleString()}</strong>
+        ${isBest ? '<span class="badge badge-green">BEST</span>' : ''}
+      </td>
+      <td>${p.speed}</td>
+      <td>${displayFuel(p.fuelLh, 1)}</td>
+      <td>${fnmText}</td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-secondary btn-sm btn-icon" onclick="editDataPoint('${p.id}')" title="Edit">&#9998;</button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteDataPoint('${p.id}')" title="Delete">&#10005;</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadState();
+render();
+
+// Close modals on backdrop click
+['profileModal', 'deleteModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    if (e.target === e.currentTarget) {
+      if (id === 'profileModal') closeProfileModal();
+      else closeDeleteModal();
+    }
+  });
+});
+
+// Keyboard: Enter to save, Escape to close
+document.getElementById('profileModal').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT') saveProfile();
+  if (e.key === 'Escape') closeProfileModal();
+});
+document.getElementById('deleteModal').addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDeleteModal();
+});
+</script>
+</body>
+</html>
